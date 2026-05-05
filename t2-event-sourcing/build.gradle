@@ -1,0 +1,44 @@
+apply plugin: 'application'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: 'java'
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_21
+}
+
+version = '1.0'
+
+ext {
+    mainClassName = "org.pgi.paxoscoin.Main"
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+}
+
+task gitAdd(type: Exec) {
+    commandLine "git", "add", "--all"
+}
+
+task gitDiff(type: Exec) {
+  doFirst {
+    standardOutput = new FileOutputStream("${projectDir}/t2-submission.diff")
+  }
+
+  commandLine "git", "diff", "v1.0"
+}
+
+task prepareSubmission(type: Zip) {
+  from "${projectDir}/t2-submission.diff"
+  archiveBaseName = 't2-submission'
+  archiveVersion = ''
+  destinationDirectory = file(projectDir)
+}
+
+gitDiff.dependsOn gitAdd
+gitDiff.dependsOn build
+prepareSubmission.dependsOn gitDiff
