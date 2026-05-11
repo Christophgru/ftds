@@ -60,6 +60,10 @@ public class Employee implements Serializable {
         return card;
     }
 
+
+    //added by Christoph to allow reinitialisation with null to avoid infinite reference loops
+    public void setCard(Card card){this.card=card;}
+
     /**
      * Gets the account that is linked to the employee.
      *

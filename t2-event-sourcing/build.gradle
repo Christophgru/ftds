@@ -42,3 +42,7 @@ task prepareSubmission(type: Zip) {
 gitDiff.dependsOn gitAdd
 gitDiff.dependsOn build
 prepareSubmission.dependsOn gitDiff
+
+application {
+    mainClass = 'org.pgi.paxoscoin.Main'
+}

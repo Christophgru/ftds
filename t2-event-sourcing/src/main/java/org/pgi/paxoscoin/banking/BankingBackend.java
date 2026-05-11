@@ -4,6 +4,11 @@ import org.pgi.paxoscoin.commands.Command;
 import org.pgi.paxoscoin.commands.PayWageCommand;
 import org.pgi.paxoscoin.commands.ReadCardCommand;
 import org.pgi.paxoscoin.exceptions.UnsupportedCommandException;
+import org.pgi.paxoscoin.worldmodel.Card;
+import org.pgi.paxoscoin.worldmodel.Employee;
+
+import java.io.*;
+import java.util.*;
 
 
 /**
@@ -11,8 +16,12 @@ import org.pgi.paxoscoin.exceptions.UnsupportedCommandException;
  */
 public class BankingBackend {
     private static BankingBackend instance;
-    
+    //sum of all known accounts
     private double globalBalance;
+    // Folder and file path
+    private static final String FOLDER_NAME = "backup";
+    private static final String FILE_NAME = "number.txt";
+    HashMap<UUID,Account> accounts = new HashMap<>();
 
 
     /**
@@ -21,6 +30,7 @@ public class BankingBackend {
     private BankingBackend() {
         // can only be instantiated through {@link #getInstance()}
         this.globalBalance = 0d;
+        System.out.println("banking backend created");
 
     }
 
@@ -51,6 +61,11 @@ public class BankingBackend {
 
             // TODO: create ChangedBalanceEvent
 
+            UUID id = pwcommand.getEmployee().getId();
+            //in case the user doesnt exist in banking backend, create a new account
+            Account acc = accounts.getOrDefault(id, new Account(pwcommand.getEmployee(),0.0));
+            acc.deposit(pwcommand.getAmount());
+            accounts.put(acc.getEmployee().getId(),acc);
         } else if(command instanceof ReadCardCommand) {
             ReadCardCommand rccommand = (ReadCardCommand) command;
             // reject any read card commands, if the current account balance is not sufficing
@@ -62,6 +77,10 @@ public class BankingBackend {
             this.globalBalance -= rccommand.getAmount();
             // TODO: create ChagedBalanceEvent
 
+            UUID id = rccommand.getCard().getEmployee().getAccount().getEmployee().getId();
+            Account acc = accounts.getOrDefault(id, new Account(rccommand.getCard().getEmployee(),0.0));
+            acc.withdraw(rccommand.getAmount());
+            accounts.put(acc.getEmployee().getId(),acc);
 
 
         } else {
@@ -93,13 +112,88 @@ public class BankingBackend {
         // TODO: save a current checkpoint of all accounts to a file
         // the choice of format is completely up to you,
         // but has to match the restore logic in the restoreCheckpoint method
+        try {
+            // Create folder if it doesn't exist
+            File folder = new File(FOLDER_NAME);
+            if (!folder.exists()) {
+                folder.mkdir();
+            }
+
+            // Create file inside folder
+            File file = new File(folder, FILE_NAME);
+
+            // FileWriter without 'true' overwrites previous content
+            FileWriter writer = new FileWriter(file);   // save global balance
+            writer.write("GLOBAL=" + this.globalBalance + "\n");
+
+            // save accounts
+            for (Map.Entry<UUID, Account> acc : accounts.entrySet()) {
+                Employee e=acc.getValue().getEmployee();
+                Card c=acc.getValue().getEmployee().getCard();
+                writer.write(
+                         e.getId().toString() + "="+acc.getValue().getBalance()+"="+ e.getName()+ "="+
+                                c.getCardId().toString()+"\n"
+                );
+            }
+
+            writer.close();
+
+            System.out.println("Number written successfully.");
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
      * Restores a checkpoint that was saved with {@link #saveCheckpoint()}
      */
     public void restoreCheckpoint() {
-        // TODO: restore the last saved checkpoint
-        throw new RuntimeException("Restore is not implemented!");
+        double globalBalance = -1;
+
+
+        try {
+            File file = new File(FOLDER_NAME, FILE_NAME);
+
+            BufferedReader reader = new BufferedReader(new FileReader(file));
+
+            accounts.clear();
+
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+
+                String[] parts = line.split("=");
+
+                if (parts[0].equals("GLOBAL")) {
+
+                    globalBalance = Double.parseDouble(parts[1]);
+
+                } else {
+
+                    UUID employee_id=UUID.fromString(parts[0]);
+                    double balance=Double.parseDouble(parts[1]);
+                    String name = parts[2];
+                    UUID cardId=UUID.fromString(parts[3]);
+
+                    Employee employee=new Employee(employee_id,name,null,null);
+                    Card card=new Card(cardId,employee);
+                    Account acc = new Account(employee,balance);
+                    employee.setAccount(acc);
+                    employee.setCard(card);
+
+                    accounts.put(employee_id, acc);
+                }
+            }
+
+            reader.close();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        if(globalBalance!=1){
+            setGlobalBalance(globalBalance);
+        }
+
     }
 }
