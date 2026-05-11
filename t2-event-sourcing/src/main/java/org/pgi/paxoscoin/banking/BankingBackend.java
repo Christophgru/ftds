@@ -56,6 +56,14 @@ public class BankingBackend {
         
         if(command instanceof PayWageCommand) {
             PayWageCommand pwcommand = (PayWageCommand) command;
+            if(pwcommand.getEmployee().getAccount()==null){
+                System.out.println("nullpointer alert!");
+                UUID key=pwcommand.getEmployee().getId();
+                Account a_tmp=accounts.get(key);
+                //could not recover null object, create new account
+                if(a_tmp==null) a_tmp=new Account(pwcommand.getEmployee(),0.0);
+                pwcommand.getEmployee().setAccount(a_tmp);
+            }
             pwcommand.getEmployee().getAccount().deposit(pwcommand.getAmount());
             this.globalBalance += pwcommand.getAmount();
 
@@ -69,6 +77,15 @@ public class BankingBackend {
         } else if(command instanceof ReadCardCommand) {
             ReadCardCommand rccommand = (ReadCardCommand) command;
             // reject any read card commands, if the current account balance is not sufficing
+            //if nullpointer is triggered, try to recover with stored accounts
+            if(rccommand.getCard().getEmployee().getAccount()==null){
+                System.out.println("nullpointer alert!");
+                UUID key=rccommand.getCard().getEmployee().getId();
+                Account a_tmp=accounts.get(key);
+                //could not recover null object, abort transaction
+                if(a_tmp==null) return;
+                rccommand.getCard().getEmployee().setAccount(a_tmp);
+            }
             if (rccommand.getAmount() > rccommand.getCard().getEmployee().getAccount().getBalance()) {
                 System.err.println(rccommand.getCard().getEmployee().getName() + " just tried to overdraw their account!");
                 return;

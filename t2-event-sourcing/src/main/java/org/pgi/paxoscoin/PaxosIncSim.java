@@ -52,6 +52,8 @@ public class PaxosIncSim implements Runnable {
                 e.printStackTrace();
             }
         }
+        //summe aller gehaltsauszahlungen ergibt 110.063.041, die ausgaben der Mitarbeiter betragen 11.238.576=>
+        // erwartetes endgeld:98.824.465<=>ergebnis simulation ach Aufgabe 1) 98.860.506
         System.err.println("Simulation finished; global balance=" + Util.formatCurrency(BankingBackend.getInstance().getGlobalBalance()));
     }
 
