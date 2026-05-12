@@ -26,6 +26,7 @@ public class PaxosIncSim implements Runnable {
 
     @Override
     public void run() {
+        BankingBackend.getInstance(employees);
         // log commands
         int i = 0;
         for (Command command: commands) {

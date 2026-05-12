@@ -21,15 +21,17 @@ public class BankingBackend {
     // Folder and file path
     private static final String FOLDER_NAME = "backup";
     private static final String FILE_NAME = "number.txt";
-    HashMap<UUID,Account> accounts = new HashMap<>();
+    Map<UUID, Employee>employees;
+
 
 
     /**
      * Private constructor to allow instantiation only through {@link #getInstance()}
      */
-    private BankingBackend() {
+    private BankingBackend(Map<UUID, Employee> employees) {
         // can only be instantiated through {@link #getInstance()}
         this.globalBalance = 0d;
+        this.employees=employees;
         System.out.println("banking backend created");
 
     }
@@ -39,12 +41,19 @@ public class BankingBackend {
      *
      * @return instance The banking backend instance
      */
-    public static BankingBackend getInstance() {
+    public static BankingBackend getInstance(Map<UUID, Employee> employees) {
         if (BankingBackend.instance == null) {
-            instance = new BankingBackend();
+            instance = new BankingBackend(employees);
         }
         return instance;
     }
+    public static BankingBackend getInstance() {
+        if (BankingBackend.instance == null) {
+            throw new RuntimeException("Initial getInstance call must be made with employees map");
+        }
+        return instance;
+    }
+
 
     /**
      * Handle a command (e.g. a card that is read or a wage that is payed).
@@ -53,13 +62,13 @@ public class BankingBackend {
      * @throws UnsupportedCommandException in case the command is unrecognized
      */
     public void handleCommand(Command command) throws UnsupportedCommandException {
-        
+        System.out.print(".");
         if(command instanceof PayWageCommand) {
             PayWageCommand pwcommand = (PayWageCommand) command;
             if(pwcommand.getEmployee().getAccount()==null){
                 System.out.println("nullpointer alert!");
                 UUID key=pwcommand.getEmployee().getId();
-                Account a_tmp=accounts.get(key);
+                Account a_tmp=employees.get(key).getAccount();
                 //could not recover null object, create new account
                 if(a_tmp==null) a_tmp=new Account(pwcommand.getEmployee(),0.0);
                 pwcommand.getEmployee().setAccount(a_tmp);
@@ -71,9 +80,8 @@ public class BankingBackend {
 
             UUID id = pwcommand.getEmployee().getId();
             //in case the user doesnt exist in banking backend, create a new account
-            Account acc = accounts.getOrDefault(id, new Account(pwcommand.getEmployee(),0.0));
-            acc.deposit(pwcommand.getAmount());
-            accounts.put(acc.getEmployee().getId(),acc);
+            Employee e=employees.get(id);
+            Account acc = (e!=null) ?e.getAccount(): new Account(pwcommand.getEmployee(),0.0);
         } else if(command instanceof ReadCardCommand) {
             ReadCardCommand rccommand = (ReadCardCommand) command;
             // reject any read card commands, if the current account balance is not sufficing
@@ -81,7 +89,12 @@ public class BankingBackend {
             if(rccommand.getCard().getEmployee().getAccount()==null){
                 System.out.println("nullpointer alert!");
                 UUID key=rccommand.getCard().getEmployee().getId();
-                Account a_tmp=accounts.get(key);
+                Employee e=employees.get(key);
+                if (e == null) {
+                    System.out.println("Employee doesnt exist, reject payment");
+                    return;
+                }
+                Account a_tmp = e.getAccount();
                 //could not recover null object, abort transaction
                 if(a_tmp==null) return;
                 rccommand.getCard().getEmployee().setAccount(a_tmp);
@@ -95,9 +108,8 @@ public class BankingBackend {
             // TODO: create ChagedBalanceEvent
 
             UUID id = rccommand.getCard().getEmployee().getAccount().getEmployee().getId();
-            Account acc = accounts.getOrDefault(id, new Account(rccommand.getCard().getEmployee(),0.0));
-            acc.withdraw(rccommand.getAmount());
-            accounts.put(acc.getEmployee().getId(),acc);
+            Employee e=employees.get(id);
+            Account acc = e.getAccount();
 
 
         } else {
@@ -144,15 +156,25 @@ public class BankingBackend {
             writer.write("GLOBAL=" + this.globalBalance + "\n");
 
             // save accounts
-            for (Map.Entry<UUID, Account> acc : accounts.entrySet()) {
-                Employee e=acc.getValue().getEmployee();
-                Card c=acc.getValue().getEmployee().getCard();
+            for (Map.Entry<UUID, Employee> emp : employees.entrySet()) {
+                Employee e=emp.getValue();
+                Card c=emp.getValue().getCard();
                 writer.write(
-                         e.getId().toString() + "="+acc.getValue().getBalance()+"="+ e.getName()+ "="+
+                         e.getId().toString() + "="+emp.getValue().getAccount().getBalance()+"="+ e.getName()+ "="+
                                 c.getCardId().toString()+"\n"
                 );
             }
+            double total = 0;
 
+            for (Employee e : employees.values()) {
+                total += e.getAccount().getBalance();
+            }
+            if(total==this.globalBalance) {
+                System.out.println("global balance and sum of all accounts at checkpoint are both =" + Double.toString(total));
+            }else{
+                System.out.println("global balance = "+Double.toString(this.globalBalance)+
+                        " but sum of all accounts at checkpoint is =" + Double.toString(total));
+            }
             writer.close();
 
             System.out.println("Number written successfully.");
@@ -166,7 +188,6 @@ public class BankingBackend {
      * Restores a checkpoint that was saved with {@link #saveCheckpoint()}
      */
     public void restoreCheckpoint() {
-        double globalBalance = -1;
 
 
         try {
@@ -174,7 +195,7 @@ public class BankingBackend {
 
             BufferedReader reader = new BufferedReader(new FileReader(file));
 
-            accounts.clear();
+            employees.clear();
 
             String line;
 
@@ -183,9 +204,10 @@ public class BankingBackend {
                 String[] parts = line.split("=");
 
                 if (parts[0].equals("GLOBAL")) {
-
-                    globalBalance = Double.parseDouble(parts[1]);
-
+                    double recv_global_Balance=Double.parseDouble(parts[1]);
+                    if(recv_global_Balance!=-1){
+                        setGlobalBalance(recv_global_Balance);
+                    }
                 } else {
 
                     UUID employee_id=UUID.fromString(parts[0]);
@@ -198,19 +220,30 @@ public class BankingBackend {
                     Account acc = new Account(employee,balance);
                     employee.setAccount(acc);
                     employee.setCard(card);
-
-                    accounts.put(employee_id, acc);
+                    //i believe here we get some inconsitency because employees might still be saved but global balance is reset
+                    employees.put(employee_id, employee);
                 }
             }
 
             reader.close();
 
+
+            double total = 0;
+
+            for (Employee e : employees.values()) {
+                total += e.getAccount().getBalance();
+            }
+            if(total==this.globalBalance) {
+                System.out.println("global balance and sum of all accounts at recovery are both =" + Double.toString(total));
+            }else{
+                System.out.println("global balance = "+Double.toString(this.globalBalance)+
+                        " but sum of all accounts at recovery is =" + Double.toString(total));
+            }
+
         } catch (IOException e) {
             e.printStackTrace();
         }
-        if(globalBalance!=1){
-            setGlobalBalance(globalBalance);
-        }
+
 
     }
 }
