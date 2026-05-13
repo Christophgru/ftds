@@ -1,0 +1,20 @@
+####################2####################
+
+Global balance before outage:
+Global balance after outage:
+
+Issues with this approach:
+The Checkpoint approach will not track any events,
+that happened between the last checkpoint and the
+power outage. This will most likely result in some
+missed events (420 at most).
+
+####################3####################
+
+How to cheat the checkpointing system:
+- Wait until right before the cleaning robots unplugs
+the main power socket.
+- Perform the desired purchase events (the more
+expensive the better)
+- Coordinate with your colleagues to avoid execution
+of more than 420 events since the last checkpoint.
