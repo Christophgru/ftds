@@ -48,4 +48,11 @@ public class ReadCardCommand implements Command {
             ", amount='" + amount + '\'' +
             "} :: globalBalance=" + Util.formatCurrency(BankingBackend.getInstance().getGlobalBalance());
     }
+
+    public String toCSV() {
+        return  this.terminal.getId().toString() + ";"
+                + this.card.getCardId().toString() + ";"
+                + this.getTime().toEpochMilli() + ";"
+                + Integer.toString((int) this.getAmount())+"\n";
+    }
 }

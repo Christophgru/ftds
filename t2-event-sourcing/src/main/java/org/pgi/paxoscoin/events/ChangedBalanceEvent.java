@@ -10,7 +10,7 @@ import org.pgi.paxoscoin.banking.TransactionType;
 public class ChangedBalanceEvent implements Event {
     private TransactionType transactionType;
     private Employee employee;
-    private Optional<Terminal> terminal;
+    private Terminal terminal;
     private double amount;
     private Instant time;
 
@@ -19,11 +19,29 @@ public class ChangedBalanceEvent implements Event {
         return this.time;
     }
 
-    public ChangedBalanceEvent (TransactionType transactiontype, Employee employee, Optional<Terminal> terminal, double amount, Instant time) {
+
+
+    public ChangedBalanceEvent (TransactionType transactiontype, Employee employee, Terminal terminal, double amount, Instant time) {
         this.transactionType = transactiontype;
         this.employee = employee;
         this.terminal = terminal;
         this.amount = amount;
         this.time = time;
+    }
+
+    public TransactionType getTransactionType() {
+        return transactionType;
+    }
+
+    public Employee getEmployee() {
+        return employee;
+    }
+
+    public Terminal getTerminal() {
+        return terminal;
+    }
+
+    public double getAmount() {
+        return amount;
     }
 }

@@ -2,10 +2,12 @@ package org.pgi.paxoscoin.banking;
 
 import org.pgi.paxoscoin.worldmodel.Employee;
 
+import java.io.Serializable;
+
 /**
  * The account class that represents an employee's internal banking account at Paxos Global Inc.
  */
-public class Account {
+public class Account implements Serializable {
     private Employee employee;
 
     private double balance;

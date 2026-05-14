@@ -3,11 +3,12 @@ package org.pgi.paxoscoin.banking;
 import org.pgi.paxoscoin.commands.Command;
 import org.pgi.paxoscoin.commands.PayWageCommand;
 import org.pgi.paxoscoin.commands.ReadCardCommand;
+import org.pgi.paxoscoin.events.Event;
 import org.pgi.paxoscoin.exceptions.UnsupportedCommandException;
 import org.pgi.paxoscoin.worldmodel.Card;
 import org.pgi.paxoscoin.worldmodel.Employee;
 import org.pgi.paxoscoin.events.ChangedBalanceEvent;
-import org.pgi.paxoscoin.banking.TransactionType;
+import org.pgi.paxoscoin.events.EventLog;
 
 import java.io.*;
 import java.time.Instant;
@@ -25,6 +26,8 @@ public class BankingBackend {
     private static final String FOLDER_NAME = "backup";
     private static final String FILE_NAME = "number.txt";
     Map<UUID, Employee>employees;
+    private EventLog eventlog;
+    Boolean subtask_switch = Boolean.FALSE;
 
 
 
@@ -35,6 +38,7 @@ public class BankingBackend {
         // can only be instantiated through {@link #getInstance()}
         this.globalBalance = 0d;
         this.employees=employees;
+        this.eventlog = new EventLog();
         System.out.println("banking backend created");
 
     }
@@ -79,7 +83,7 @@ public class BankingBackend {
             pwcommand.getEmployee().getAccount().deposit(pwcommand.getAmount());
             this.globalBalance += pwcommand.getAmount();
 
-            ChangedBalanceEvent cbe = new ChangedBalanceEvent(TransactionType.DEPOSIT, pwcommand.getEmployee(), Optional.empty(), pwcommand.getAmount(), Instant.now());
+            this.eventlog.persist(new ChangedBalanceEvent(TransactionType.DEPOSIT, pwcommand.getEmployee(), null, pwcommand.getAmount(), pwcommand.getTime()));
 
             UUID id = pwcommand.getEmployee().getId();
             //in case the user doesnt exist in banking backend, create a new account
@@ -106,10 +110,13 @@ public class BankingBackend {
                 System.err.println(rccommand.getCard().getEmployee().getName() + " just tried to overdraw their account!");
                 return;
             }
-            rccommand.getCard().getEmployee().getAccount().withdraw(rccommand.getAmount());
-            this.globalBalance -= rccommand.getAmount();
+            //double amount = rccommand.getAmount();
+            //Fix task4
+            double amount=(rccommand.getAmount()<0)?-rccommand.getAmount():rccommand.getAmount();
+            rccommand.getCard().getEmployee().getAccount().withdraw(amount);
+            this.globalBalance -= amount;
 
-            ChangedBalanceEvent cbe = new ChangedBalanceEvent(TransactionType.WITHDRAW, rccommand.getCard().getEmployee(), Optional.of(rccommand.getTerminal()), rccommand.getAmount(), Instant.now());
+            this.eventlog.persist(new ChangedBalanceEvent(TransactionType.WITHDRAW, rccommand.getCard().getEmployee(), rccommand.getTerminal(), rccommand.getAmount(), rccommand.getTime()));
 
             UUID id = rccommand.getCard().getEmployee().getAccount().getEmployee().getId();
             Employee e=employees.get(id);
@@ -145,6 +152,11 @@ public class BankingBackend {
         // TODO: save a current checkpoint of all accounts to a file
         // the choice of format is completely up to you,
         // but has to match the restore logic in the restoreCheckpoint method
+
+        if(!this.subtask_switch) {
+            return;
+        }
+
         try {
             // Create folder if it doesn't exist
             File folder = new File(FOLDER_NAME);
@@ -194,7 +206,7 @@ public class BankingBackend {
     public void restoreCheckpoint() {
         // FALSE => Subtask 3
         // TRUE => Subtask 2
-        Boolean subtask_switch = Boolean.TRUE;
+
 
         if (subtask_switch) {
             try {
@@ -251,7 +263,25 @@ public class BankingBackend {
                 e.printStackTrace();
             }
         } else {
-
+            Vector<Event> events = eventlog.restoreEvent();
+            for (Event event : events) {
+                if (event instanceof ChangedBalanceEvent) {
+                    ChangedBalanceEvent e = ChangedBalanceEvent.class.cast(event);
+                    Command c = null;
+                    if (e.getTransactionType() == TransactionType.WITHDRAW) {
+                        c = new ReadCardCommand(e.getTerminal(), e.getEmployee().getCard(), e.getTime(), e.getAmount());
+                    } else {
+                        c = new PayWageCommand(e.getEmployee(), e.getTime(), e.getAmount());
+                    }
+                    try {
+                        handleCommand(c);
+                    } catch (UnsupportedCommandException ex) {
+                        throw new RuntimeException(ex);
+                    }
+                } else {
+                    throw new RuntimeException("Fuck! - unexpected event type in Event Vector");
+                }
+            }
         }
     }
 }

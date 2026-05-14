@@ -1,11 +1,12 @@
 package org.pgi.paxoscoin.worldmodel;
 
+import java.io.Serializable;
 import java.util.UUID;
 
 /**
  * The card class represents a physical NFC card that was issued to an employee.
  */
-public class Card {
+public class Card implements Serializable {
     private UUID cardId;
     private Employee employee;
 

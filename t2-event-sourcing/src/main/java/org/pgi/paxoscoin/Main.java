@@ -9,6 +9,7 @@ import java.util.UUID;
 import org.pgi.paxoscoin.commands.Command;
 import org.pgi.paxoscoin.commands.PayWageCommand;
 import org.pgi.paxoscoin.commands.ReadCardCommand;
+import org.pgi.paxoscoin.commands.Translator;
 import org.pgi.paxoscoin.worldmodel.Card;
 import org.pgi.paxoscoin.worldmodel.Employee;
 import org.pgi.paxoscoin.worldmodel.Terminal;
@@ -30,5 +31,9 @@ public class Main {
         // start simulation
         PaxosIncSim simulation = new PaxosIncSim(commands, cards, employees, terminals);
         simulation.run();
+
+        // Solution for Subtask 3
+        Translator trans =  new Translator(cards, employees, terminals);
+        trans.translate("csv/commands.csv", "csv/command_rewrite.csv");
     }
 }
