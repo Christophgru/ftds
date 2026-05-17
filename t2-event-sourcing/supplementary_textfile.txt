@@ -1,7 +1,8 @@
 ####################2####################
+Checkpoint implementation
 
-Global balance before outage:
-Global balance after outage:
+Global balance before outage: 50,034,507
+Global balance after outage: 50,076,182 <-diffrence comes from events after last checkpoint and before poweroutput 
 
 Issues with this approach:
 The Checkpoint approach will not track any events,
@@ -10,6 +11,7 @@ power outage. This will most likely result in some
 missed events (420 at most).
 
 ####################3####################
+Eventrecovery
 
 How to cheat the checkpointing system:
 - Wait until right before the cleaning robots unplugs
@@ -18,3 +20,11 @@ the main power socket.
 expensive the better)
 - Coordinate with your colleagues to avoid execution
 of more than 420 events since the last checkpoint.
+
+With Eventrecovery this is no longer possible.
+
+####################4####################
+
+ReadCard Commands schould never contain a negative value. Fixed by flipping it.
+New command.csv is now rewritten with fixes into csv/command_rewrite.csv.
+Running the new eventlog with the faulty programm results in the same result as running the old log with a fixed programm (Fix in BankingBackend.java l.115).

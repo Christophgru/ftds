@@ -27,7 +27,7 @@ public class BankingBackend {
     private static final String FILE_NAME = "number.txt";
     Map<UUID, Employee>employees;
     private EventLog eventlog;
-    Boolean subtask_switch = Boolean.FALSE;
+    Boolean subtask_switch = Boolean.TRUE;//true for task 2, false for task 3
 
 
 
