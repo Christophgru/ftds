@@ -1,0 +1,3 @@
+[submodule "ftds-t3"]
+	path = ftds-t3
+	url = git@gitlab.uni-ulm.de:wyy93/ftds-t3.git
