@@ -1,3 +1,6 @@
 [submodule "ftds-t3"]
 	path = ftds-t3
 	url = git@gitlab.uni-ulm.de:wyy93/ftds-t3.git
+[submodule "t4-zab"]
+	path = t4-zab
+	url = git@gitlab.uni-ulm.de:dnj13/ftds-t4-v2.git

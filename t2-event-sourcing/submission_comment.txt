@@ -1,0 +1,9 @@
+We put the zipfolder from the task in another git repo to be able to collaborate better.
+https://github.com/Christophgru/ftds
+
+I belive, in that process the git Tag v1.0 was lost, therefore gradle prepareSubmission failed. I added Tag v1.0 to our initial commit such that the diff now goes against our own commit with a maybe minimal difrent folder structure (root is now not / but t2-event-sourcing).
+Should there be any problems occuring due to this changed repo structure please feel free to contact me christoph.gruender@uni-ulm.de or yannic.grafwallner@uni-ulm.de 
+
+
+Kind Regards
+Yannic and Christoph
